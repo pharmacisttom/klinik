@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed-test.ts",
+    "db:seed": "node prisma/seed-local.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -1,14 +1,33 @@
 'use client';
 
 import React, { useState } from 'react';
+import { dispensePrescriptionAction } from '@/app/actions/clinical';
 import { Pill, CheckCircle2, AlertCircle, Printer } from 'lucide-react';
 
 export default function PharmacyPage() {
-  const [dispensed, setDispensed] = useState(false);
+  const [patientHn, setPatientHn] = useState('HN-690916-0001');
+  const [patientName, setPatientName] = useState('ประณีต สุขใจ');
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleDispense = () => {
-    setDispensed(true);
-    setTimeout(() => setDispensed(false), 4000);
+  const handleDispense = async () => {
+    setLoading(true);
+    setStatus(null);
+
+    const res = await dispensePrescriptionAction(patientHn);
+    setLoading(false);
+
+    if (res.success) {
+      setStatus({
+        type: 'success',
+        message: 'ยืนยันการตัดสต๊อกและจัดยาเรียบร้อย! คิวถูกส่งไปยังจุดชำระเงิน (Cashier) แล้ว',
+      });
+    } else {
+      setStatus({
+        type: 'error',
+        message: res.error || 'เกิดข้อผิดพลาดในการจัดยา',
+      });
+    }
   };
 
   return (
@@ -29,10 +48,20 @@ export default function PharmacyPage() {
           </span>
         </div>
 
-        {dispensed && (
-          <div className="p-4 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-2 text-sm font-medium">
-            <CheckCircle2 className="w-5 h-5 text-indigo-600" />
-            <span>ยืนยันการตัดสต๊อกและจัดยาเรียบร้อย! คิวถูกส่งไปยังจุดชำระเงิน (Cashier) แล้ว</span>
+        {status && (
+          <div
+            className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${
+              status.type === 'success'
+                ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}
+          >
+            {status.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            )}
+            <span>{status.message}</span>
           </div>
         )}
 
@@ -41,7 +70,18 @@ export default function PharmacyPage() {
           <div className="flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400 uppercase">ผู้ป่วย</span>
-              <h3 className="text-xl font-bold text-slate-900">นายประณีต สุขใจ (HN-690916-0001)</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setPatientHn('HN-690916-0001');
+                  setPatientName('ประณีต สุขใจ');
+                }}
+                className="block text-left"
+              >
+                <h3 className="text-xl font-bold text-slate-900 hover:text-indigo-600">
+                  {patientName} ({patientHn})
+                </h3>
+              </button>
             </div>
             <div className="text-right">
               <span className="text-xs font-semibold text-slate-400 uppercase">แพทย์ผู้ตรวจ</span>
@@ -92,16 +132,19 @@ export default function PharmacyPage() {
 
         <div className="flex gap-4">
           <button
+            type="button"
             onClick={() => alert('กำลังพิมพ์ฉลากยา...')}
             className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition border border-slate-300 flex items-center justify-center gap-2"
           >
             <Printer className="w-5 h-5 text-slate-600" /> พิมพ์ฉลากยา
           </button>
           <button
+            type="button"
             onClick={handleDispense}
-            className="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md shadow-indigo-500/20"
+            disabled={loading}
+            className="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md shadow-indigo-500/20 disabled:opacity-50"
           >
-            ยืนยันการจัดยาและตัดสต๊อกสินค้า
+            {loading ? 'กำลังจัดยา...' : 'ยืนยันการจัดยา'}
           </button>
         </div>
       </div>

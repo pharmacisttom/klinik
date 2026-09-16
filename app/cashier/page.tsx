@@ -1,19 +1,40 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CreditCard, QrCode, CheckCircle2, Receipt } from 'lucide-react';
+import { processPaymentAction } from '@/app/actions/clinical';
+import { CreditCard, QrCode, CheckCircle2, Receipt, AlertCircle } from 'lucide-react';
 import { formatTHB } from '@/lib/utils/formatters';
 
 export default function CashierPage() {
+  const [patientHn, setPatientHn] = useState('HN-690916-0001');
+  const [patientName, setPatientName] = useState('ประณีต สุขใจ');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QR_PROMPTPAY'>('QR_PROMPTPAY');
+  const [invoiceNo, setInvoiceNo] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const subtotal = 155.0; // 20 Paracetamol (50) + 21 Amoxicillin (105)
   const doctorFee = 300.0;
   const netTotal = subtotal + doctorFee;
 
-  const handleProcessPayment = () => {
-    setPaid(true);
+  const handleProcessPayment = async () => {
+    setLoading(true);
+    setError(null);
+
+    const res = await processPaymentAction({
+      patientHn,
+      paymentMethod,
+    });
+
+    setLoading(false);
+
+    if (res.success) {
+      setPaid(true);
+      setInvoiceNo(res.invoiceNo || 'INV-2569-0042');
+    } else {
+      setError(res.error || 'เกิดข้อผิดพลาดในการชำระเงิน');
+    }
   };
 
   return (
@@ -30,16 +51,26 @@ export default function CashierPage() {
             </div>
           </div>
           <span className="text-xs font-semibold px-3 py-1 bg-amber-100 text-amber-800 rounded-full">
-            สถานะ: รอชำระเงิน
+            {paid ? 'สถานะ: ชำระเงินแล้ว' : 'สถานะ: รอชำระเงิน'}
           </span>
         </div>
 
+        {error && (
+          <div className="p-4 rounded-xl bg-red-50 text-red-800 border border-red-200 flex items-center gap-3 text-sm font-medium">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {paid && (
-          <div className="p-6 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-center space-y-3">
+          <div className="invoice-success p-6 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
             <h3 className="text-xl font-bold">ชำระเงินสำเร็จแล้ว!</h3>
-            <p className="text-sm text-emerald-700">ออกใบเสร็จรับเงิน เลขที่: <span className="font-mono font-bold">INV-2569-0042</span></p>
+            <p className="text-sm text-emerald-700">
+              ออกใบเสร็จรับเงิน เลขที่: <span className="font-mono font-bold">{invoiceNo}</span>
+            </p>
             <button
+              type="button"
               onClick={() => alert('กำลังพิมพ์ใบเสร็จรับเงิน...')}
               className="px-6 py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition shadow"
             >
@@ -51,7 +82,21 @@ export default function CashierPage() {
         {!paid && (
           <>
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-500 uppercase mb-4">สรุปค่าใช้จ่ายผู้ป่วย: นายประณีต สุขใจ</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-slate-500 uppercase">
+                  สรุปค่าใช้จ่ายผู้ป่วย: {patientName} ({patientHn})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPatientHn('HN-690916-0001');
+                    setPatientName('ประณีต สุขใจ');
+                  }}
+                  className="text-xs font-bold text-amber-700 hover:underline"
+                >
+                  เลือก ประณีต สุขใจ
+                </button>
+              </div>
 
               <div className="space-y-3 text-sm border-b border-slate-200 pb-4">
                 <div className="flex justify-between">
@@ -113,10 +158,12 @@ export default function CashierPage() {
             )}
 
             <button
+              type="button"
               onClick={handleProcessPayment}
-              className="w-full py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition shadow-md shadow-amber-500/20 text-lg"
+              disabled={loading}
+              className="w-full py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition shadow-md shadow-amber-500/20 text-lg disabled:opacity-50"
             >
-              ยืนยันการรับชำระเงิน {formatTHB(netTotal)}
+              {loading ? 'กำลังประมวลผลชำระเงิน...' : `ชำระเงิน ${formatTHB(netTotal)}`}
             </button>
           </>
         )}

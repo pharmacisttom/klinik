@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Stethoscope, Plus, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { saveConsultationAction } from '@/app/actions/clinical';
+import { Stethoscope, Plus, Trash2, CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface PrescriptionRow {
   medCode: string;
@@ -15,6 +16,7 @@ export default function DoctorConsultationPage() {
   const [patientHn, setPatientHn] = useState('HN-690916-0001');
   const [patientName, setPatientName] = useState('นายประณีต สุขใจ');
   const [allergies, setAllergies] = useState<string[]>(['Penicillin']);
+  const [chiefComplaint, setChiefComplaint] = useState('เจ็บคอ มีไข้');
   const [icdCode, setIcdCode] = useState('J02.9');
   const [icdDesc, setIcdDesc] = useState('Acute pharyngitis, unspecified');
   const [doctorNotes, setDoctorNotes] = useState('คอแดงโต มีเสมหะ ให้พักผ่อน ดื่มน้ำอุ่น');
@@ -22,7 +24,8 @@ export default function DoctorConsultationPage() {
     { medCode: 'MED-PARA-500', medName: 'Paracetamol 500mg', qty: 20, dosage: '1 เม็ด หลังอาหาร 3 มื้อ', price: 2.5 },
     { medCode: 'MED-AMOX-500', medName: 'Amoxicillin 500mg', qty: 21, dosage: '1 แคปซูล ก่อนอาหาร 3 มื้อ (ทานติดต่อกันจนหมด)', price: 5.0 },
   ]);
-  const [status, setStatus] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const addMedication = () => {
     setPrescriptions([
@@ -35,10 +38,37 @@ export default function DoctorConsultationPage() {
     setPrescriptions(prescriptions.filter((_, i) => i !== index));
   };
 
-  const handleCompleteConsultation = (e: React.FormEvent) => {
+  const handleCompleteConsultation = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus(true);
-    setTimeout(() => setStatus(false), 4000);
+    setLoading(true);
+    setStatus(null);
+
+    const res = await saveConsultationAction({
+      patientHn,
+      chiefComplaint,
+      diagnosisCode: icdCode,
+      diagnosisDesc: icdDesc,
+      doctorNotes,
+      items: prescriptions.map((p) => ({
+        medCode: p.medCode,
+        qty: p.qty,
+        dosage: p.dosage,
+      })),
+    });
+
+    setLoading(false);
+
+    if (res.success) {
+      setStatus({
+        type: 'success',
+        message: 'บันทึกผลการตรวจและสั่งจ่ายยาเรียบร้อย! คิวถูกส่งไปยังห้องยา (Pharmacy) แล้ว',
+      });
+    } else {
+      setStatus({
+        type: 'error',
+        message: res.error || 'เกิดข้อผิดพลาดในการบันทึกผลการตรวจ',
+      });
+    }
   };
 
   return (
@@ -61,6 +91,21 @@ export default function DoctorConsultationPage() {
           </div>
         </div>
 
+        {/* Quick Patient Select Button for E2E testing */}
+        <div className="p-4 bg-cyan-50/50 rounded-xl border border-cyan-100 flex items-center justify-between">
+          <span className="text-xs font-semibold text-cyan-800">ผู้ป่วยรอนัดตรวจ:</span>
+          <button
+            type="button"
+            onClick={() => {
+              setPatientHn('HN-690916-0001');
+              setPatientName('ประณีต สุขใจ');
+            }}
+            className="px-3 py-1 bg-white hover:bg-cyan-100 text-cyan-900 text-xs font-bold rounded-lg border border-cyan-200 transition shadow-sm"
+          >
+            ประณีต สุขใจ (HN-690916-0001)
+          </button>
+        </div>
+
         {/* Patient Allergy Warning Banner */}
         {allergies.length > 0 && (
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3 text-amber-900">
@@ -73,9 +118,19 @@ export default function DoctorConsultationPage() {
         )}
 
         {status && (
-          <div className="p-4 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-2 text-sm font-medium">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            <span>บันทึกผลการตรวจและสั่งจ่ายยาเรียบร้อย! คิวถูกส่งไปยังห้องยา (Pharmacy) แล้ว</span>
+          <div
+            className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${
+              status.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}
+          >
+            {status.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            )}
+            <span>{status.message}</span>
           </div>
         )}
 
@@ -91,11 +146,24 @@ export default function DoctorConsultationPage() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">อาการสำคัญ (Chief Complaint)</label>
+            <textarea
+              rows={2}
+              name="chiefComplaint"
+              value={chiefComplaint}
+              onChange={(e) => setChiefComplaint(e.target.value)}
+              placeholder="เจ็บคอ มีไข้..."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-cyan-500 outline-none"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">รหัสโรค ICD-10 *</label>
               <input
                 type="text"
+                name="diagnosisCode"
                 required
                 value={icdCode}
                 onChange={(e) => setIcdCode(e.target.value)}
@@ -107,6 +175,7 @@ export default function DoctorConsultationPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-1">คำอธิบายการวินิจฉัย (Diagnosis Description) *</label>
               <input
                 type="text"
+                name="diagnosisDesc"
                 required
                 value={icdDesc}
                 onChange={(e) => setIcdDesc(e.target.value)}
@@ -120,6 +189,7 @@ export default function DoctorConsultationPage() {
             <label className="block text-sm font-semibold text-slate-700 mb-1">บันทึกของแพทย์ / คำแนะนำ (Doctor Notes)</label>
             <textarea
               rows={3}
+              name="doctorNotes"
               value={doctorNotes}
               onChange={(e) => setDoctorNotes(e.target.value)}
               placeholder="ข้อแนะนำการปฏิบัติตน การนัดติดตามอาการ..."
@@ -200,9 +270,10 @@ export default function DoctorConsultationPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-xl transition shadow-md shadow-cyan-500/20"
+            disabled={loading}
+            className="w-full py-3.5 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-xl transition shadow-md shadow-cyan-500/20 disabled:opacity-50"
           >
-            ยืนยันบันทึกการตรวจและส่งใบสั่งยาไปคลังยา
+            {loading ? 'กำลังสั่งจ่ายยา...' : 'สั่งจ่ายยา และส่งไปคลังยา'}
           </button>
         </form>
       </div>

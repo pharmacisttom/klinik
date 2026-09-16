@@ -1,24 +1,53 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Activity, Heart, Thermometer, Weight, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { saveScreeningAction } from '@/app/actions/clinical';
+import { Activity, Heart, Thermometer, Weight, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function NurseScreeningPage() {
-  const [hn, setHn] = useState('');
+  const [hn, setHn] = useState('HN-690916-0001');
   const [bpSys, setBpSys] = useState('120');
   const [bpDia, setBpDia] = useState('80');
   const [pulse, setPulse] = useState('78');
   const [temp, setTemp] = useState('37.2');
   const [weight, setWeight] = useState('65');
   const [height, setHeight] = useState('170');
-  const [chiefComplaint, setChiefComplaint] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [chiefComplaint, setChiefComplaint] = useState('มีไข้ เจ็บคอ มา 2 วัน');
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSaveVitals = (e: React.FormEvent) => {
+  const handleSaveVitals = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 4000);
+    setLoading(true);
+    setStatus(null);
+
+    const res = await saveScreeningAction({
+      patientHn: hn,
+      bpSys: parseFloat(bpSys) || 120,
+      bpDia: parseFloat(bpDia) || 80,
+      pulse: parseFloat(pulse) || 78,
+      temp: parseFloat(temp) || 37.2,
+      weight: parseFloat(weight) || 65,
+      height: parseFloat(height) || 170,
+      chiefComplaint,
+    });
+
+    setLoading(false);
+
+    if (res.success) {
+      setStatus({
+        type: 'success',
+        message: 'บันทึกสัญญาณชีพเรียบร้อย! ส่งผู้ป่วยเข้าคิวห้องตรวจแพทย์แล้ว',
+      });
+    } else {
+      setStatus({
+        type: 'error',
+        message: res.error || 'เกิดข้อผิดพลาดในการบันทึกสัญญาณชีพ',
+      });
+    }
   };
+
+  const bmi = (parseFloat(weight) / Math.pow(parseFloat(height) / 100, 2)).toFixed(1);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
@@ -33,10 +62,32 @@ export default function NurseScreeningPage() {
           </div>
         </div>
 
-        {saved && (
-          <div className="p-4 rounded-xl mb-6 bg-teal-50 text-teal-800 border border-teal-200 flex items-center gap-2 text-sm font-medium">
-            <CheckCircle2 className="w-5 h-5 text-teal-600" />
-            <span>บันทึกสัญญาณชีพเรียบร้อย! ส่งผู้ป่วยเข้าคิวห้องตรวจแพทย์แล้ว</span>
+        {/* Quick Patient Select Button for E2E testing */}
+        <div className="mb-6 p-4 bg-teal-50/50 rounded-xl border border-teal-100 flex items-center justify-between">
+          <span className="text-xs font-semibold text-teal-800">คิวผู้ป่วยรอนัดตรวจ:</span>
+          <button
+            type="button"
+            onClick={() => setHn('HN-690916-0001')}
+            className="px-3 py-1 bg-white hover:bg-teal-100 text-teal-900 text-xs font-bold rounded-lg border border-teal-200 transition shadow-sm"
+          >
+            ประณีต สุขใจ (HN-690916-0001)
+          </button>
+        </div>
+
+        {status && (
+          <div
+            className={`p-4 rounded-xl mb-6 flex items-center gap-3 text-sm font-medium ${
+              status.type === 'success'
+                ? 'bg-teal-50 text-teal-800 border border-teal-200'
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}
+          >
+            {status.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            )}
+            <span>{status.message}</span>
           </div>
         )}
 
@@ -47,6 +98,7 @@ export default function NurseScreeningPage() {
             </label>
             <input
               type="text"
+              name="hn"
               required
               value={hn}
               onChange={(e) => setHn(e.target.value)}
@@ -63,6 +115,7 @@ export default function NurseScreeningPage() {
               <div className="flex gap-2">
                 <input
                   type="number"
+                  name="bpSys"
                   required
                   value={bpSys}
                   onChange={(e) => setBpSys(e.target.value)}
@@ -72,6 +125,7 @@ export default function NurseScreeningPage() {
                 <span className="self-center font-bold text-slate-400">/</span>
                 <input
                   type="number"
+                  name="bpDia"
                   required
                   value={bpDia}
                   onChange={(e) => setBpDia(e.target.value)}
@@ -87,6 +141,7 @@ export default function NurseScreeningPage() {
               </label>
               <input
                 type="number"
+                name="pulse"
                 required
                 value={pulse}
                 onChange={(e) => setPulse(e.target.value)}
@@ -102,6 +157,7 @@ export default function NurseScreeningPage() {
               <input
                 type="number"
                 step="0.1"
+                name="temp"
                 required
                 value={temp}
                 onChange={(e) => setTemp(e.target.value)}
@@ -117,6 +173,7 @@ export default function NurseScreeningPage() {
               <input
                 type="number"
                 step="0.1"
+                name="weight"
                 required
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
@@ -129,6 +186,7 @@ export default function NurseScreeningPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-1">ส่วนสูง (cm)</label>
               <input
                 type="number"
+                name="height"
                 required
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
@@ -138,9 +196,9 @@ export default function NurseScreeningPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">ดัชนีมวลกาย (BMI คำนวณอัตโนมัติ)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">ดัชนีมวลกาย (BMI)</label>
               <div className="w-full px-4 py-2 bg-slate-100 rounded-xl font-bold text-teal-700 border border-slate-200">
-                {(parseFloat(weight) / Math.pow(parseFloat(height) / 100, 2)).toFixed(1)} kg/m²
+                {bmi} kg/m²
               </div>
             </div>
           </div>
@@ -149,6 +207,7 @@ export default function NurseScreeningPage() {
             <label className="block text-sm font-semibold text-slate-700 mb-1">อาการสำคัญ (Chief Complaint)</label>
             <textarea
               rows={3}
+              name="chiefComplaint"
               required
               value={chiefComplaint}
               onChange={(e) => setChiefComplaint(e.target.value)}
@@ -159,9 +218,10 @@ export default function NurseScreeningPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition shadow-md shadow-teal-500/20 flex items-center justify-center gap-2"
+            disabled={loading}
+            className="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition shadow-md shadow-teal-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <span>บันทึกสัญญาณชีพและส่งเข้าห้องตรวจแพทย์</span>
+            <span>{loading ? 'กำลังบันทึก...' : 'บันทึกสัญญาณชีพและส่งเข้าห้องตรวจแพทย์'}</span>
             <ArrowRight className="w-5 h-5" />
           </button>
         </form>

@@ -101,6 +101,7 @@ export default function BookingPage() {
             <div className="relative">
               <input
                 type="text"
+                name="nationalId"
                 required
                 maxLength={13}
                 value={nationalId}
@@ -130,6 +131,7 @@ export default function BookingPage() {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">คำนำหน้าชื่อ</label>
               <select
+                name="prefix"
                 value={prefix}
                 onChange={(e) => setPrefix(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
@@ -145,6 +147,7 @@ export default function BookingPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-1">ชื่อจริง *</label>
               <input
                 type="text"
+                name="firstName"
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -156,6 +159,7 @@ export default function BookingPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-1">นามสกุล *</label>
               <input
                 type="text"
+                name="lastName"
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
@@ -170,6 +174,7 @@ export default function BookingPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-1">วันเกิด *</label>
               <input
                 type="date"
+                name="dateOfBirth"
                 required
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
@@ -179,6 +184,7 @@ export default function BookingPage() {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">เพศ *</label>
               <select
+                name="gender"
                 value={gender}
                 onChange={(e) => setGender(e.target.value as any)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
@@ -192,6 +198,7 @@ export default function BookingPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-1">เบอร์โทรศัพท์ *</label>
               <input
                 type="tel"
+                name="phone"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -205,6 +212,7 @@ export default function BookingPage() {
             <label className="block text-sm font-semibold text-slate-700 mb-1">ประวัติการแพ้ยา (ระบุคั่นด้วยเครื่องหมายจุลภาค)</label>
             <input
               type="text"
+              name="allergies"
               value={allergies}
               onChange={(e) => setAllergies(e.target.value)}
               placeholder="Penicillin, Sulfa, Aspirin"
@@ -216,6 +224,7 @@ export default function BookingPage() {
             <label className="block text-sm font-semibold text-slate-700 mb-1">ที่อยู่ปัจจุบัน *</label>
             <textarea
               rows={3}
+              name="address"
               required
               value={address}
               onChange={(e) => setAddress(e.target.value)}
