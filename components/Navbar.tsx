@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Activity, Stethoscope, UserCheck, Pill, CreditCard, ShieldCheck, FileText } from 'lucide-react';
+import { Activity, Stethoscope, UserCheck, Pill, CreditCard, ShieldCheck, Package, Users } from 'lucide-react';
 
 export function Navbar() {
   return (
@@ -19,7 +19,7 @@ export function Navbar() {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-1 text-sm font-medium text-slate-700">
+          <nav className="hidden xl:flex items-center space-x-1 text-sm font-medium text-slate-700">
             <Link
               href="/booking"
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-emerald-600 transition"
@@ -46,21 +46,35 @@ export function Navbar() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-indigo-600 transition"
             >
               <Pill className="w-4 h-4 text-indigo-600" />
-              <span>ห้องห้องยา</span>
+              <span>จ่ายยา</span>
+            </Link>
+            <Link
+              href="/pharmacy/inventory"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-indigo-600 transition"
+            >
+              <Package className="w-4 h-4 text-indigo-600" />
+              <span>คลังยา</span>
             </Link>
             <Link
               href="/cashier"
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-amber-600 transition"
             >
               <CreditCard className="w-4 h-4 text-amber-600" />
-              <span>การเงิน/ชำระเงิน</span>
+              <span>ชำระเงิน</span>
+            </Link>
+            <Link
+              href="/admin/users"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-purple-600 transition"
+            >
+              <Users className="w-4 h-4 text-purple-600" />
+              <span>บุคลากร</span>
             </Link>
             <Link
               href="/admin/audit-logs"
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-rose-600 transition"
             >
               <ShieldCheck className="w-4 h-4 text-rose-600" />
-              <span>Audit Logs (PDPA)</span>
+              <span>Audit Logs</span>
             </Link>
           </nav>
 

@@ -424,6 +424,126 @@ export async function processPaymentAction(data: {
 }
 
 /**
+ * Get Inventory Medications
+ */
+export async function getInventoryAction() {
+  try {
+    const medications = await prisma.medication.findMany({
+      orderBy: { code: 'asc' },
+    });
+    return { success: true, medications };
+  } catch (error: any) {
+    console.error('Error fetching inventory:', error);
+    return { success: false, error: 'ไม่สามารถดึงข้อมูลคลังยาได้' };
+  }
+}
+
+/**
+ * Add / Update Medication Stock
+ */
+export async function addOrUpdateMedicationAction(data: {
+  code: string;
+  name: string;
+  genericName: string;
+  category: string;
+  unit: string;
+  pricePerUnit: number;
+  stockQuantity: number;
+  reorderLevel: number;
+}) {
+  try {
+    const code = sanitizeString(data.code);
+    const medication = await prisma.medication.upsert({
+      where: { code },
+      update: {
+        stockQuantity: { increment: data.stockQuantity },
+        pricePerUnit: data.pricePerUnit,
+        reorderLevel: data.reorderLevel,
+      },
+      create: {
+        code,
+        name: sanitizeString(data.name),
+        genericName: sanitizeString(data.genericName),
+        category: sanitizeString(data.category),
+        unit: sanitizeString(data.unit),
+        pricePerUnit: data.pricePerUnit,
+        stockQuantity: data.stockQuantity,
+        reorderLevel: data.reorderLevel,
+      },
+    });
+
+    await logAudit({
+      userId: 'pharmacist-admin',
+      action: 'UPDATE_INVENTORY',
+      resource: `Medication:${medication.code}`,
+      details: { addedQty: data.stockQuantity, newTotal: medication.stockQuantity },
+    });
+
+    revalidatePath('/pharmacy/inventory');
+    return { success: true, medication };
+  } catch (error: any) {
+    console.error('Error updating medication:', error);
+    return { success: false, error: error.message || 'เกิดข้อผิดพลาดในการปรับปรุงคลังยา' };
+  }
+}
+
+/**
+ * Get Staff Users (Admin)
+ */
+export async function getStaffUsersAction() {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, users };
+  } catch (error: any) {
+    console.error('Error fetching staff users:', error);
+    return { success: false, error: 'ไม่สามารถดึงข้อมูลบุคลากรได้' };
+  }
+}
+
+/**
+ * Create New Staff User (Admin)
+ */
+export async function createStaffUserAction(data: {
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+}) {
+  try {
+    const email = sanitizeString(data.email);
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return { success: false, error: 'อีเมลนี้ถูกใช้งานในระบบแล้ว' };
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        name: sanitizeString(data.name),
+        email,
+        passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m', // default hash
+        role: data.role,
+        phone: data.phone ? sanitizeString(data.phone) : null,
+      },
+    });
+
+    await logAudit({
+      userId: 'admin-system',
+      action: 'CREATE_STAFF_USER',
+      resource: `User:${user.id}`,
+      details: { name: user.name, role: user.role },
+    });
+
+    revalidatePath('/admin/users');
+    return { success: true, user };
+  } catch (error: any) {
+    console.error('Error creating staff user:', error);
+    return { success: false, error: error.message || 'ไม่สามารถสร้างบุคลากรใหม่ได้' };
+  }
+}
+
+/**
  * Get Audit Logs for Admin
  */
 export async function getAuditLogsAction(query?: string) {
