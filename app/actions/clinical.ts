@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { logAudit } from '@/lib/security/audit';
 import { sanitizeString } from '@/lib/security/sanitization';
+import { checkDrugAllergies } from '@/lib/clinical/allergy-check';
 
 /**
  * Search patients by HN, National ID, or Name
@@ -142,6 +143,8 @@ export async function saveConsultationAction(data: {
   patientHn: string;
   diagnosisCode: string;
   diagnosisDesc: string;
+  dxType?: number;
+  isChronic?: boolean;
   doctorNotes?: string;
   chiefComplaint?: string;
   items: Array<{
@@ -188,11 +191,24 @@ export async function saveConsultationAction(data: {
       });
     }
 
+    if (appointment.doctorNotes || appointment.diagnosisCode) {
+      await prisma.emrVersionHistory.create({
+        data: {
+          appointmentId: appointment.id,
+          doctorId: doctor.id,
+          previousNotes: appointment.doctorNotes,
+          previousDiagnosisCode: appointment.diagnosisCode,
+        },
+      });
+    }
+
     await prisma.appointment.update({
       where: { id: appointment.id },
       data: {
         diagnosisCode: sanitizeString(data.diagnosisCode),
         diagnosisDesc: sanitizeString(data.diagnosisDesc),
+        dxType: data.dxType || 1,
+        isChronic: data.isChronic || false,
         doctorNotes: data.doctorNotes ? sanitizeString(data.doctorNotes) : null,
         status: 'PENDING_PHARMACY',
       },
@@ -203,6 +219,26 @@ export async function saveConsultationAction(data: {
     });
 
     if (data.items.length > 0) {
+      // Find medication IDs to check for allergies
+      const medCodes = data.items.map((i) => i.medCode);
+      const targetMeds = await prisma.medication.findMany({
+        where: { code: { in: medCodes } },
+        select: { id: true },
+      });
+
+      const allergyResult = await checkDrugAllergies(
+        patient.id,
+        targetMeds.map((m) => m.id)
+      );
+
+      if (!allergyResult.isSafe) {
+        return {
+          success: false,
+          error: 'พบความเสี่ยงแพ้ยารุนแรง (Allergy Hard-Stop)',
+          hardStops: allergyResult.hardStops,
+        };
+      }
+
       const prescription = await prisma.prescription.create({
         data: {
           appointmentId: appointment.id,
@@ -540,6 +576,43 @@ export async function createStaffUserAction(data: {
   } catch (error: any) {
     console.error('Error creating staff user:', error);
     return { success: false, error: error.message || 'ไม่สามารถสร้างบุคลากรใหม่ได้' };
+  }
+}
+
+/**
+ * Update Staff User Role & Record Audit Event (Admin Only)
+ */
+export async function updateUserRoleAction(userId: string, newRole: string) {
+  try {
+    const cleanUserId = sanitizeString(userId);
+    const validRoles = ['ADMIN', 'DOCTOR', 'NURSE', 'PHARMACIST', 'CASHIER'];
+    if (!validRoles.includes(newRole)) {
+      return { success: false, error: 'บทบาทหน้าที่ไม่ถูกต้อง' };
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: cleanUserId } });
+    if (!user) {
+      return { success: false, error: 'ไม่พบผู้ใช้งานในระบบ' };
+    }
+
+    const oldRole = user.role;
+    const updatedUser = await prisma.user.update({
+      where: { id: cleanUserId },
+      data: { role: newRole },
+    });
+
+    await logAudit({
+      userId: 'admin-system',
+      action: 'UPDATE_USER_ROLE',
+      resource: `User:${user.email}`,
+      details: { oldRole, newRole, name: user.name },
+    });
+
+    revalidatePath('/admin/users');
+    return { success: true, user: updatedUser };
+  } catch (error: any) {
+    console.error('Error updating user role:', error);
+    return { success: false, error: error.message || 'ไม่สามารถปรับเปลี่ยนบทบาทผู้ใช้งานได้' };
   }
 }
 

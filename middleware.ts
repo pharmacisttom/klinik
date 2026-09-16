@@ -48,9 +48,24 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // 3. Authentication Check for Frontend and Protected Routes
+  const publicRoutes = ['/login', '/pdpa/data-request', '/admin/license'];
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+  const sessionCookie = request.cookies.get('tomvis_session');
+
+  if (!sessionCookie && !isPublicRoute) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (sessionCookie && pathname === '/login') {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   const response = NextResponse.next();
 
-  // 3. Security Headers Hardening
+  // 4. Security Headers Hardening
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-XSS-Protection', '1; mode=block');
@@ -66,3 +81,4 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|public).*)'],
 };
+

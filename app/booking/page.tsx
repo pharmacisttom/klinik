@@ -31,6 +31,7 @@ export default function BookingPage() {
     setStatus(null);
 
     const res = await createPatientAction({
+      idType: 'THAI_CID',
       nationalId,
       prefix,
       firstName,
@@ -41,6 +42,8 @@ export default function BookingPage() {
       allergies: allergies ? allergies.split(',').map((s) => s.trim()) : [],
       chronicDiseases: [],
       address,
+      isNewborn: false,
+      isDeceased: false,
     });
 
     setLoading(false);

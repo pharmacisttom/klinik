@@ -2,60 +2,111 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { PatientSchema, PatientSchemaType } from '@/lib/validations/patient';
-import { generateHN } from '@/lib/utils/hn-generator';
+import { patientSchema, PatientSchemaType } from '@/lib/validations/patient';
 import { logAudit } from '@/lib/security/audit';
-import { sanitizeString } from '@/lib/security/sanitization';
 
 export async function createPatientAction(data: PatientSchemaType) {
   try {
-    // 1. Validate payload with Zod
-    const validated = PatientSchema.parse(data);
+    const validated = patientSchema.parse(data);
 
-    // 2. Check duplicate National ID
-    const existing = await prisma.patient.findUnique({
-      where: { nationalId: validated.nationalId },
-    });
-
-    if (existing) {
-      return { success: false, error: 'เลขประจำตัวประชาชนนี้มีประวัติในระบบแล้ว (HN: ' + existing.hn + ')' };
-    }
-
-    // 3. Generate sequential HN
-    const count = await prisma.patient.count();
-    const newHn = generateHN(count + 1);
-
-    // 4. Create Patient Record in DB
-    const patient = await prisma.patient.create({
-      data: {
-        hn: newHn,
-        nationalId: sanitizeString(validated.nationalId),
-        prefix: sanitizeString(validated.prefix),
-        firstName: sanitizeString(validated.firstName),
-        lastName: sanitizeString(validated.lastName),
-        dateOfBirth: new Date(validated.dateOfBirth),
-        gender: validated.gender,
-        bloodGroup: validated.bloodGroup,
-        allergies: JSON.stringify(validated.allergies),
-        chronicDiseases: JSON.stringify(validated.chronicDiseases),
-        phone: sanitizeString(validated.phone),
-        emergencyContact: validated.emergencyContact ? sanitizeString(validated.emergencyContact) : null,
-        address: sanitizeString(validated.address),
+    const existing = await prisma.patient.findFirst({
+      where: {
+        OR: [{ nationalId: validated.nationalId }, { hn: `HN-${validated.nationalId.slice(-6)}` }],
       },
     });
 
-    // 5. Log PDPA Audit Entry
-    await logAudit({
-      userId: 'system-receptionist',
-      action: 'CREATE_PATIENT',
-      resource: `Patient:${patient.hn}`,
-      details: { name: `${patient.firstName} ${patient.lastName}` },
+    if (existing) {
+      return { success: false, error: 'มีผู้ป่วยรหัสประจำตัวนี้ในระบบแล้ว' };
+    }
+
+    const count = await prisma.patient.count();
+    const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    const autoHn = `HN-${dateStr}-${(count + 1).toString().padStart(4, '0')}`;
+
+    const patient = await prisma.patient.create({
+      data: {
+        hn: autoHn,
+        nationalId: validated.nationalId,
+        idType: validated.idType,
+        passportNo: validated.passportNo || null,
+        prefix: validated.prefix,
+        firstName: validated.firstName,
+        lastName: validated.lastName,
+        dateOfBirth: new Date(validated.dateOfBirth),
+        gender: validated.gender,
+        bloodGroup: validated.bloodGroup || null,
+        allergies: JSON.stringify(validated.allergies),
+        chronicDiseases: JSON.stringify(validated.chronicDiseases),
+        phone: validated.phone,
+        emergencyContact: validated.emergencyContact || null,
+        address: validated.address,
+        isNewborn: validated.isNewborn,
+        isDeceased: validated.isDeceased,
+      },
     });
 
-    revalidatePath('/booking');
+    await logAudit({
+      userId: 'system-user',
+      action: 'REGISTER_PATIENT',
+      resource: `Patient:${patient.hn}`,
+      details: { hn: patient.hn, idType: patient.idType },
+    });
+
+    revalidatePath('/nurse/screening');
     return { success: true, patient };
   } catch (error: any) {
-    console.error('Error creating patient:', error);
+    console.error('Error registering patient:', error);
     return { success: false, error: error.message || 'ไม่สามารถลงทะเบียนผู้ป่วยได้' };
+  }
+}
+
+/**
+ * Merge duplicate patient records (การยุบรวม HN ซ้ำ)
+ */
+export async function mergeDuplicatePatientsAction(primaryHn: string, secondaryHn: string) {
+  try {
+    const primary = await prisma.patient.findUnique({ where: { hn: primaryHn } });
+    const secondary = await prisma.patient.findUnique({ where: { hn: secondaryHn } });
+
+    if (!primary || !secondary) {
+      return { success: false, error: 'ไม่พบข้อมูลผู้ป่วยสำหรับยุบรวม' };
+    }
+
+    // Re-link secondary patient's appointments and prescriptions to primary patient
+    await prisma.appointment.updateMany({
+      where: { patientId: secondary.id },
+      data: { patientId: primary.id },
+    });
+
+    await prisma.prescription.updateMany({
+      where: { patientId: secondary.id },
+      data: { patientId: primary.id },
+    });
+
+    await prisma.invoice.updateMany({
+      where: { patientId: secondary.id },
+      data: { patientId: primary.id },
+    });
+
+    // Mark secondary patient as archived
+    await prisma.patient.update({
+      where: { id: secondary.id },
+      data: {
+        isArchived: true,
+        archivedReason: `ยุบรวมประวัติเข้ากับ HN: ${primary.hn}`,
+      },
+    });
+
+    await logAudit({
+      userId: 'system-user',
+      action: 'MERGE_PATIENT_RECORDS',
+      resource: `Patient:${primary.hn}`,
+      details: { primaryHn, secondaryHnMerged: secondaryHn },
+    });
+
+    return { success: true, message: `ยุบรวมประวัติ ${secondaryHn} เข้ากับ ${primaryHn} สำเร็จ` };
+  } catch (error: any) {
+    console.error('Error merging patients:', error);
+    return { success: false, error: 'ไม่สามารถยุบรวมประวัติผู้ป่วยได้' };
   }
 }

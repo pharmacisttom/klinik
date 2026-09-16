@@ -155,6 +155,61 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Admin Backend Console Hub */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 text-white shadow-2xl space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-2">
+                🔑 ADMIN BACKEND CONSOLE
+              </div>
+              <h2 className="text-2xl font-bold text-white">ศูนย์รวมเมนูการจัดการระบบหลังบ้าน (Backend Admin Hub)</h2>
+              <p className="text-sm text-slate-400 mt-1">
+                ช่องทางสำหรับผู้ดูแลระบบ (Admin) ในการบริหารจัดการฐานข้อมูล การสำรองข้อมูล และรายงานความปลอดภัย
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              href="/admin/audit-logs"
+              className="p-5 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-2xl transition group"
+            >
+              <span className="text-2xl mb-2 block">🛡️</span>
+              <h3 className="font-bold text-sm text-emerald-400 group-hover:text-emerald-300">1. ประวัติการเข้าถึง (Audit Logs)</h3>
+              <p className="text-xs text-slate-400 mt-1">ตรวจสอบ HMAC-SHA256 WORM Log ป้องกันการแก้ไขประวัติการรักษา</p>
+            </Link>
+
+            <Link
+              href="/admin/backups"
+              className="p-5 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-2xl transition group"
+            >
+              <span className="text-2xl mb-2 block">💾</span>
+              <h3 className="font-bold text-sm text-emerald-400 group-hover:text-emerald-300">2. สำรองข้อมูลปิดประจำวัน</h3>
+              <p className="text-xs text-slate-400 mt-1">สำรองฐานข้อมูลปิดคลินิกอัตโนมัติ พร้อมระบบ Restore กู้คืนข้อมูล</p>
+            </Link>
+
+            <Link
+              href="/admin/reports/builder"
+              className="p-5 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-2xl transition group"
+            >
+              <span className="text-2xl mb-2 block">📊</span>
+              <h3 className="font-bold text-sm text-emerald-400 group-hover:text-emerald-300">3. สร้างและออกแบบรายงาน</h3>
+              <p className="text-xs text-slate-400 mt-1">สร้างรายงานไดนามิกและนำเข้าไฟล์แม่แบบ JSON รายงานทางการแพทย์</p>
+            </Link>
+
+            <Link
+              href="/admin/exports"
+              className="p-5 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-2xl transition group"
+            >
+              <span className="text-2xl mb-2 block">💊</span>
+              <h3 className="font-bold text-sm text-emerald-400 group-hover:text-emerald-300">4. สรุปรายงาน อย.ส.4 / อย.ส.5</h3>
+              <p className="text-xs text-slate-400 mt-1">ส่งออกไฟล์รายงานวัตถุออกฤทธิ์ต่อจิตและประสาทสำหรับส่งสำนักงาน อย.</p>
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

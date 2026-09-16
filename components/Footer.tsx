@@ -27,6 +27,7 @@ export function Footer() {
               <li><Link href="/privacy" className="hover:text-emerald-400 transition">นโยบายความเป็นส่วนตัว (Privacy Policy)</Link></li>
               <li><Link href="/terms" className="hover:text-emerald-400 transition">ข้อตกลงการใช้บริการ (Terms of Service)</Link></li>
               <li><Link href="/pdpa/data-request" className="hover:text-emerald-400 transition">พอร์ตัลใช้สิทธิ์ข้อมูลส่วนบุคคล</Link></li>
+              <li><Link href="/admin/license" className="hover:text-emerald-400 text-emerald-400 font-semibold transition flex items-center gap-1 mt-1"><span>📜 ใบอนุญาตลิขสิทธิ์ระบบ (System License)</span></Link></li>
             </ul>
           </div>
           <div>
@@ -36,8 +37,13 @@ export function Footer() {
             <p className="text-xs text-slate-400">อีเมล: info@klinik.local</p>
           </div>
         </div>
-        <div className="pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
-          © {new Date().getFullYear()} Klinik Medical System. All rights reserved.
+        <div className="pt-8 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>© {new Date().getFullYear()} Tomvis Clinic Medical System. All rights reserved.</div>
+          <div>
+            <Link href="/admin/license" className="text-slate-400 hover:text-emerald-400 transition underline font-mono text-[11px]">
+              Tomvis Enterprise License Verification Ref: MOPH-TH-PDPA-2026
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

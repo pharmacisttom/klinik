@@ -28,3 +28,8 @@ Thumbs.db
 # Playwright test results
 test-results/
 playwright-report/
+
+# Local backups & build info
+backups/
+*.tsbuildinfo
+
