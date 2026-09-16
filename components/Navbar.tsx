@@ -26,6 +26,8 @@ export function Navbar() {
     { href: '/booking', label: 'ซักประวัติ/จองคิว', icon: UserCheck, color: 'text-emerald-600' },
     { href: '/nurse/screening', label: 'พยาบาลคัดกรอง', icon: Activity, color: 'text-teal-600' },
     { href: '/doctor/consultation', label: 'ห้องตรวจแพทย์', icon: Stethoscope, color: 'text-cyan-600' },
+    { href: '/queue/caller', label: 'เรียกคิว', icon: Activity, color: 'text-rose-600' },
+    { href: '/queue/tv-display', label: 'จอ TV เรียกคิว', icon: Activity, color: 'text-indigo-600' },
     { href: '/pharmacy', label: 'จ่ายยา', icon: Pill, color: 'text-indigo-600' },
     { href: '/pharmacy/stock-card', label: 'คลังยา/สต๊อกการ์ด', icon: Package, color: 'text-indigo-600' },
     { href: '/pharmacy/cold-chain', label: 'คลังยาเย็น 2-8°C', icon: Package, color: 'text-blue-600' },
