@@ -1,0 +1,247 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  PHARMACIST
+  CASHIER
+  PATIENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  WAITING
+  IN_CONSULTATION
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PrescriptionStatus {
+  PENDING
+  DISPENSED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+enum DataRequestType {
+  DATA_EXPORT
+  DATA_ERASURE
+}
+
+enum DataRequestStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  REJECTED_LEGAL_HOLD
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  name          String
+  passwordHash  String
+  role          Role       @default(PATIENT)
+  phone         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  doctorAppointments Appointment[] @relation("DoctorAppointments")
+  patientProfile     Patient?
+  auditLogs          AuditLog[]
+  dataRequests       DataRequest[]
+
+  @@index([role])
+}
+
+model Patient {
+  id             String    @id @default(uuid())
+  userId         String?   @unique
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  hn             String    @unique
+  nationalId     String    @unique
+  prefix         String
+  firstName      String
+  lastName       String
+  dateOfBirth    DateTime
+  gender         Gender
+  bloodGroup     String?
+  allergies      String[]  @default([])
+  chronicDiseases String[] @default([])
+  phone          String
+  emergencyContact String?
+  address        String
+  isArchived     Boolean   @default(false)
+  archivedReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  appointments   Appointment[]
+  prescriptions  Prescription[]
+  invoices       Invoice[]
+  consents       Consent[]
+
+  @@index([nationalId])
+  @@index([hn])
+  @@index([firstName, lastName])
+}
+
+model Appointment {
+  id           String            @id @default(uuid())
+  patientId    String
+  patient      Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId     String
+  doctor       User              @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  scheduledAt  DateTime
+  reason       String
+  status       AppointmentStatus @default(SCHEDULED)
+  vitals       Json?             // BP, HR, Temp, Weight, Height
+  chiefComplaint String?
+  diagnosisCode  String?         // ICD-10
+  diagnosisDesc  String?
+  doctorNotes    String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  prescription Prescription?
+
+  @@index([scheduledAt, doctorId])
+  @@index([patientId])
+  @@index([status])
+}
+
+model Medication {
+  id            String     @id @default(uuid())
+  code          String     @unique
+  name          String
+  genericName   String
+  category      String
+  unit          String
+  pricePerUnit  Float
+  stockQuantity Int
+  reorderLevel  Int        @default(50)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  prescriptionItems PrescriptionItem[]
+
+  @@index([stockQuantity])
+  @@index([code])
+}
+
+model Prescription {
+  id            String             @id @default(uuid())
+  appointmentId String             @unique
+  appointment   Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId     String
+  patient       Patient            @relation(fields: [patientId], references: [id])
+  status        PrescriptionStatus @default(PENDING)
+  notes         String?
+  dispensedAt   DateTime?
+  dispensedBy   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  items         PrescriptionItem[]
+  invoice       Invoice?
+
+  @@index([status])
+  @@index([patientId])
+}
+
+model PrescriptionItem {
+  id             String       @id @default(uuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicationId   String
+  medication     Medication   @relation(fields: [medicationId], references: [id])
+  quantity       Int
+  dosage         String       // e.g. "1 tab after meal tid"
+  unitPrice      Float
+  totalPrice     Float
+
+  @@index([prescriptionId])
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  invoiceNumber  String        @unique
+  patientId      String
+  patient        Patient       @relation(fields: [patientId], references: [id])
+  prescriptionId String?       @unique
+  prescription   Prescription? @relation(fields: [prescriptionId], references: [id])
+  amount         Float
+  discount       Float         @default(0)
+  netAmount      Float
+  status         InvoiceStatus @default(UNPAID)
+  paymentMethod  String?       // CASH, QR_PROMPTPAY, CREDIT_CARD
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([createdAt])
+  @@index([patientId])
+  @@index([status])
+}
+
+model Consent {
+  id          String   @id @default(uuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  purpose     String   // e.g., "TREATMENT_AND_RECORDS", "MARKETING_NOTIFICATIONS"
+  isGranted   Boolean  @default(true)
+  grantedAt   DateTime @default(now())
+  revokedAt   DateTime?
+  ipAddress   String?
+
+  @@index([patientId])
+}
+
+model DataRequest {
+  id          String            @id @default(uuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        DataRequestType
+  status      DataRequestStatus @default(PENDING)
+  reason      String?
+  adminNotes  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String   // e.g., "READ_PATIENT_RECORD", "UPDATE_PRESCRIPTION", "EXPORT_PDPA_DATA"
+  resource  String   // e.g., "Patient:uuid-1234"
+  ipAddress String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+}
