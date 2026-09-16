@@ -39,13 +39,12 @@ export async function logAudit({
         action,
         resource,
         ipAddress,
-        details: details ? (details as any) : undefined,
+        details: details ? JSON.stringify(details) : undefined,
       },
     });
     return log;
   } catch (error) {
     console.error('Failed to record PDPA audit log:', error);
-    // Non-blocking in case of log failure, but log severe warning
     return null;
   }
 }

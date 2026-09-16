@@ -1,9 +1,9 @@
-import { PrismaClient, Role, Gender, AppointmentStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 export async function seedTestData() {
-  console.log('Seeding test data for Klinik...');
+  console.log('Seeding local SQLite database for Klinik...');
 
   // Clean existing data in reverse order of dependencies
   await prisma.auditLog.deleteMany();
@@ -22,8 +22,8 @@ export async function seedTestData() {
     data: {
       email: 'admin@klinik.local',
       name: 'System Administrator',
-      passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m', // 'Password123!'
-      role: Role.ADMIN,
+      passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m',
+      role: 'ADMIN',
       phone: '0812345678',
     },
   });
@@ -33,7 +33,7 @@ export async function seedTestData() {
       email: 'doctor.somchai@klinik.local',
       name: 'Dr. Somchai Jaidee',
       passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m',
-      role: Role.DOCTOR,
+      role: 'DOCTOR',
       phone: '0823456789',
     },
   });
@@ -43,7 +43,7 @@ export async function seedTestData() {
       email: 'nurse.suda@klinik.local',
       name: 'Nurse Suda Care',
       passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m',
-      role: Role.NURSE,
+      role: 'NURSE',
       phone: '0834567890',
     },
   });
@@ -53,7 +53,7 @@ export async function seedTestData() {
       email: 'pharma.manoch@klinik.local',
       name: 'Pharm. Manoch Rx',
       passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m',
-      role: Role.PHARMACIST,
+      role: 'PHARMACIST',
       phone: '0845678901',
     },
   });
@@ -63,7 +63,7 @@ export async function seedTestData() {
       email: 'cashier.pim@klinik.local',
       name: 'Cashier Pimpaka',
       passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m',
-      role: Role.CASHIER,
+      role: 'CASHIER',
       phone: '0856789012',
     },
   });
@@ -74,7 +74,7 @@ export async function seedTestData() {
       email: 'patient.praneet@example.com',
       name: 'Praneet Sukjai',
       passwordHash: '$2a$12$eImiTXuWVxfM37uY4JANjO5E.y/tLlh4Y./1m2P78zF9Jd0bXWJ.m',
-      role: Role.PATIENT,
+      role: 'PATIENT',
       phone: '0867890123',
     },
   });
@@ -83,15 +83,15 @@ export async function seedTestData() {
     data: {
       userId: patientUser.id,
       hn: 'HN-690916-0001',
-      nationalId: '1100400123456',
+      nationalId: '1100400123450',
       prefix: 'นาย',
       firstName: 'ประณีต',
       lastName: 'สุขใจ',
       dateOfBirth: new Date('1990-05-15'),
-      gender: Gender.MALE,
+      gender: 'MALE',
       bloodGroup: 'O+',
-      allergies: ['Penicillin'],
-      chronicDiseases: ['Hypertension'],
+      allergies: JSON.stringify(['Penicillin']),
+      chronicDiseases: JSON.stringify(['Hypertension']),
       phone: '0867890123',
       emergencyContact: '0899998888 (ภรรยา)',
       address: '123/45 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110',
@@ -133,7 +133,7 @@ export async function seedTestData() {
       category: 'Antihypertensives',
       unit: 'Tablet',
       pricePerUnit: 8.0,
-      stockQuantity: 45, // Below reorder level for low stock alert test
+      stockQuantity: 45,
       reorderLevel: 100,
     },
   });
@@ -145,15 +145,15 @@ export async function seedTestData() {
       doctorId: doctorUser.id,
       scheduledAt: new Date(),
       reason: 'มีไข้ ปวดศีรษะ เจ็บคอ 2 วัน',
-      status: AppointmentStatus.IN_CONSULTATION,
-      vitals: {
+      status: 'IN_CONSULTATION',
+      vitals: JSON.stringify({
         bpSys: 120,
         bpDia: 80,
         pulse: 78,
         temp: 37.8,
         weight: 68.5,
         height: 172,
-      },
+      }),
       chiefComplaint: 'ไข้สูง มีเสมหะสีเหลือง',
       diagnosisCode: 'J02.9',
       diagnosisDesc: 'Acute pharyngitis, unspecified',
@@ -171,7 +171,7 @@ export async function seedTestData() {
     },
   });
 
-  console.log('Seed completed successfully!');
+  console.log('Local SQLite database seeded successfully!');
 }
 
 if (require.main === module) {
